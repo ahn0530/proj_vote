@@ -1,0 +1,47 @@
+<% layout('layouts/boilerplate') %>
+
+<div class="container mt-4">
+  <h1 class="mb-4">예산 목록</h1>
+  
+  <% if (locals.error) { %>
+    <div class="alert alert-danger" role="alert">
+      <%= error %>
+    </div>
+  <% } else if (budgetItems && budgetItems.length > 0) { %>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      <% budgetItems.forEach(item => { %>
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title"><%= item.category %></h5>
+              <p class="card-text"><%= item.description %></p>
+            </div>
+            <div class="card-footer text-end">
+              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-<%= item.id %>">자세히 보기</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="modal-<%= item.id %>" tabindex="-1" aria-labelledby="modalLabel-<%= item.id %>" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel-<%= item.id %>"><%= item.category %></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <%= item.description %>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p>예산 항목이 없습니다.</p>
+  <% } %>
+</div>

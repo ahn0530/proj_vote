@@ -1,0 +1,18 @@
+<% layout('layouts/boilerplate') %>
+
+<div class="container mt-4">
+  <h1 class="mb-4">정책 생성</h1>
+  
+  <form action="/participation/submit" method="POST">
+    <div class="mb-3">
+      <label for="category" class="form-label">정책 카테고리 선택:</label>
+      <select class="form-select" id="category" name="category" required>
+        <option value="">카테고리를 선택하세요</option>
+        <% categories.forEach(category => { %>
+          <option value="<%= category %>"><%= category %></option>
+        <% }) %>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">정책 생성</button>
+  </form>
+</div>
