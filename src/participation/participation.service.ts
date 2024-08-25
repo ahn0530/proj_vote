@@ -16,7 +16,6 @@ export class ParticipationService {
     private budgetItemsService: BudgetItemsService
   ) {}
 
-
   async submitParticipation(userId: number, budgetData: { category: BudgetCategory; percentage: number }[]): Promise<Participation> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -44,5 +43,4 @@ export class ParticipationService {
     }
     return { participated: false };
   }
-
 }

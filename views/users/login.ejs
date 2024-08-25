@@ -6,23 +6,24 @@
             <div class="card shadow">
                 <div class="card-body">
                     <h5 class="card-title">Login</h5>
+                    <% if (error && error.length > 0) { %>
+                        <div class="alert alert-danger" role="alert">
+                            <%= error %>
+                        </div>
+                    <% } %>
                     <form action="/users/login" method="POST" class="validated-form" novalidate>
                         <div class="mb-3">
                             <label class="form-label" for="username">Username</label>
                             <input class="form-control" type="text" id="username" name="username" autofocus required>
-                            <div class="valid-feedback">
-                                Looks good!
-                            </div>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label" for="password">Password</label>
                             <input class="form-control" type="password" id="password" name="password" required>
-                            <div class="valid-feedback">
-                                Looks good!
-                            </div>
                         </div>
-                        <input type="hidden" name="returnTo" value="<%= locals.returnTo %>">
+                        <% if (locals.returnTo) { %>
+                            <input type="hidden" name="returnTo" value="<%= returnTo %>">
+                        <% } %>
                         <button class="btn btn-success btn-block">Login</button>
                     </form>
                 </div>

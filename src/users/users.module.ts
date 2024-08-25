@@ -12,7 +12,7 @@ import { UsersRepository } from './users.repository';
     forwardRef(() => AuthModule),
   ],
   controllers: [UsersController],
-  providers: [UsersService, UsersRepository],
+  providers: [UsersService],
   exports: [UsersService],
 })
 export class UsersModule {}

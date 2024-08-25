@@ -21,7 +21,7 @@ async function bootstrap() {
   app.use(
     session({
       secret: process.env.SESSION_SECRET || 'your_session_secret',
-      resave: true,
+      resave: false,
       saveUninitialized: false,
       cookie: { 
         secure: process.env.NODE_ENV === 'production',
@@ -36,13 +36,16 @@ async function bootstrap() {
   app.use(passport.session());
   app.use(flash());
 
+  
   // Locals middleware
-  app.use((req, res, next) => {
-    res.locals.currentUser = req.user;
+  app.use((req: any, res: any, next) => {
+    res.locals.user = req.user;
+    res.locals.isAuthenticated = req.isAuthenticated();
     res.locals.success = req.flash('success');
     res.locals.error = req.flash('error');
     next();
   });
+
 
 
   // Global exception filter
