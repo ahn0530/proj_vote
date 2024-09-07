@@ -23,6 +23,7 @@ export class UsersController {
   getLogin() {
     return { title: 'Login' };
   }
+  
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto, @Req() req: Request, @Res() res: Response) {
     try {
@@ -72,7 +73,7 @@ export class UsersController {
       if (err) {
         console.error('Logout error:', err);
       }
-      res.redirect('/');
+      res.redirect('/participation/index');
     });
   }
 }

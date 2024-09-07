@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, ManyToMany, JoinTable } from 'typeorm';
 import { User } from '../users/user.entity';
 import { BudgetItem } from '../budget-items/budget-item.entity';
 
@@ -6,6 +6,15 @@ import { BudgetItem } from '../budget-items/budget-item.entity';
 export class Participation {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column()
+  title: string;
+
+  @Column('text')
+  description: string;
+
+  @Column({ nullable: true })
+  imageUrl: string;
 
   @ManyToOne(() => User, user => user.participations)
   user: User;
@@ -15,4 +24,11 @@ export class Participation {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({ default: 0 })
+  voteCount: number;
+
+  @ManyToMany(() => User)
+  @JoinTable()
+  votedUsers: User[];
 }

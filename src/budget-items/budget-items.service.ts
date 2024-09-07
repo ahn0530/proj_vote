@@ -1,10 +1,10 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BudgetItem, BudgetCategory } from './budget-item.entity';
 
 @Injectable()
-export class BudgetItemsService implements OnModuleInit {
+export class BudgetItemsService {
   constructor(
     @InjectRepository(BudgetItem)
     private budgetItemRepository: Repository<BudgetItem>,
@@ -32,7 +32,15 @@ export class BudgetItemsService implements OnModuleInit {
   async getBudgetCategories(): Promise<BudgetCategory[]> {
     return Object.values(BudgetCategory);
   }
-  
+
+  async createBudgetItem(category: BudgetCategory, participationId: number): Promise<BudgetItem> {
+    const budgetItem = this.budgetItemRepository.create({ 
+      category,
+      participation: { id: participationId }
+    });
+    return this.budgetItemRepository.save(budgetItem);
+  }
+
   async updateBudgetItem(category: BudgetCategory): Promise<BudgetItem> {
     const budgetItem = await this.budgetItemRepository.findOne({ where: { category } });
     if (!budgetItem) {
@@ -41,6 +49,7 @@ export class BudgetItemsService implements OnModuleInit {
     return this.budgetItemRepository.save(budgetItem);
   }
   
+
   async getAllBudgetItemsWithDescription(): Promise<Array<BudgetItem & { description: string }>> {
     const budgetItems = await this.budgetItemRepository.find();
     return budgetItems.map(item => ({

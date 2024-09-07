@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, Res, Render, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, Res, Render, NotFoundException, ConflictException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SessionAuthGuard } from '../auth/session.auth.guard';
 import { ParticipationService } from './participation.service';
@@ -27,12 +27,43 @@ export class ParticipationController {
   }
 
   @Get('join')
-  @UseGuards(AuthGuard('session'))
-  async renderJoin(@Req() req: Request, @Res() res: Response) {
-    if (req.user) {
-      return res.redirect('/participation/registration');
+  @Render('participation/join')
+  async renderJoin() {
+    try {
+      const participations = await this.participationService.getAllParticipations();
+      return { participations };
+    } catch (error) {
+      return { participations: [], error: '참여 목록을 가져오는 중 오류가 발생했습니다.' };
     }
-    return res.render('participation/participation', { title: '참여하기' });
+  }
+
+  @Get('join/detail/:id')
+  async renderDetail(@Param('id') id: string, @Req() req: any, @Res() res: Response) {
+    try {
+      const participation = await this.participationService.getParticipationById(Number(id));
+      const hasVoted = req.user ? await this.participationService.hasUserVoted(Number(id), req.user.id) : false;
+      if (!participation) {
+        throw new NotFoundException('Participation not found');
+      }
+      res.render('participation/detail', { participation,user: req.user, hasVoted });
+    } catch (error) {
+      res.status(404).render('error', { message: 'Participation not found' });
+    }
+  }
+
+  @Post('join/detail/:id/vote')
+  @UseGuards(SessionAuthGuard)
+  async vote(@Param('id') id: string, @Req() req: any, @Res() res: Response) {
+    try {
+      await this.participationService.vote(Number(id), req.user.id);
+      res.redirect(`/participation/join/detail/${id}`);
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        res.status(400).render('error', { message: 'You have already voted' });
+      } else {
+        res.status(500).render('error', { message: 'An error occurred while voting' });
+      }
+    }
   }
 
   @Get('registration')
@@ -49,20 +80,28 @@ export class ParticipationController {
       isAuthenticated: true
     });
   }
-
+  
   @Post('submit')
   @UseGuards(SessionAuthGuard)
-  async submitParticipation(@Req() req: Request, @Body() body: { category: BudgetCategory, percentage: number }[], @Res() res: Response) {
+  async submitParticipation(
+    @Req() req: Request, 
+    @Body() body: {
+      title: string;
+      description: string;
+      category: BudgetCategory;
+    }, 
+    @Res() res: Response
+  ) {
     try {
       const userId = req.user['id'];
       await this.participationService.submitParticipation(userId, body);
-      res.redirect('/participation/registration');
+      res.redirect('/participation/join');
     } catch (error) {
       console.error('참여 제출 중 오류 발생:', error);
       res.status(500).json({ error: '참여 제출 중 오류가 발생했습니다.' });
     }
   }
-
+  
   @Get('check')
   @UseGuards(AuthGuard('session'))
   async checkParticipation(@Req() req: Request) {

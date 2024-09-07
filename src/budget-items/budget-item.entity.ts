@@ -23,11 +23,10 @@ export class BudgetItem {
 
   @Column({
     type: 'enum',
-    enum: BudgetCategory,
-    unique: true
+    enum: BudgetCategory
   })
   category: BudgetCategory;
 
-  @ManyToOne(() => Participation, participation => participation.budgets)
+  @ManyToOne(() => Participation, participation => participation.budgets, { nullable: true })
   participation: Participation;
 }

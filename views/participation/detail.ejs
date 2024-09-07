@@ -1,59 +1,40 @@
 <% layout('layouts/boilerplate') %>
 
-<div class="carousel">
-    <div class="carousel-inner">
-        <% carouselItems.forEach((item, index) => { %>
-            <div class="carousel-item <%= index === 0 ? 'active' : '' %>">
-                <div class="carousel-caption">
-                    <h3><%= item.title %></h3>
-                </div>
-            </div>
-        <% }); %>
-    </div>
-    <a class="carousel-control carousel-control-prev" href="#" role="button">&#10094;</a>
-    <a class="carousel-control carousel-control-next" href="#" role="button">&#10095;</a>
-    <div class="carousel-indicators">
-        <% carouselItems.forEach((_, index) => { %>
-            <span class="<%= index === 0 ? 'active' : '' %>"></span>
-        <% }); %>
-    </div>
-</div>
+<div class="container mt-4">
+  <h1 class="mb-4"><%= participation.title %></h1>
 
-<div class="project-story">
-    <h2><%= projectStory.title %></h2>
-    <div class="story-content">
-        <%- projectStory.content %>
+  <div class="card">
+    <img src="<%= participation.imageUrl %>" class="card-img-top" alt="<%= participation.title %>">
+    <div class="card-body">
+      <p class="card-text"><%= participation.description %></p>
+      <p class="card-text"><small class="text-muted">카테고리: <%= participation.budgets[0]?.category %></small></p>
+      <p class="card-text"><small class="text-muted">작성자: <%= participation.user.username %></small></p>
+      <p class="card-text"><small class="text-muted">작성일: <%= participation.createdAt.toLocaleDateString() %></small></p>
+      <p class="card-text">투표 수: <%= participation.voteCount %></p>
+      
+      <% if (user) { %>
+        <% if (!hasVoted) { %>
+          <button class="btn btn-primary" onclick="confirmVote()">투표하기</button>
+        <% } else { %>
+          <button class="btn btn-secondary" disabled>이미 투표함</button>
+        <% } %>
+      <% } else { %>
+        <a href="/users/login" class="btn btn-primary">로그인하여 투표하기</a>
+      <% } %>
     </div>
+  </div>
+
+  <a href="/participation/join" class="btn btn-secondary mt-3">목록으로 돌아가기</a>
 </div>
 
 <script>
-    const items = document.querySelectorAll('.carousel-item');
-    const indicators = document.querySelectorAll('.carousel-indicators span');
-    const prevButton = document.querySelector('.carousel-control-prev');
-    const nextButton = document.querySelector('.carousel-control-next');
-    let currentIndex = 0;
-
-    function showItem(index) {
-        items[currentIndex].classList.remove('active');
-        indicators[currentIndex].classList.remove('active');
-        items[index].classList.add('active');
-        indicators[index].classList.add('active');
-        currentIndex = index;
-    }
-
-    prevButton.addEventListener('click', () => {
-        let index = currentIndex - 1;
-        if (index < 0) index = items.length - 1;
-        showItem(index);
-    });
-
-    nextButton.addEventListener('click', () => {
-        let index = currentIndex + 1;
-        if (index >= items.length) index = 0;
-        showItem(index);
-    });
-
-    indicators.forEach((indicator, index) => {
-        indicator.addEventListener('click', () => showItem(index));
-    });
+function confirmVote() {
+  if (confirm('정말로 투표하시겠습니까?')) {
+    document.getElementById('voteForm').submit();
+  }
+}
 </script>
+
+<form id="voteForm" action="/participation/join/detail/<%= participation.id %>/vote" method="POST" style="display: none;">
+  <!-- CSRF 토큰 등 필요한 hidden 필드 추가 -->
+</form>

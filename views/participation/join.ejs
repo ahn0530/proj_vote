@@ -1,0 +1,35 @@
+<% layout('layouts/boilerplate') %>
+
+<div class="container mt-4">
+  <h1 class="mb-4">참여 목록</h1>
+  <a href="/participation/registration" class="btn btn-primary mt-3">정책 생성하기</a>
+  <% if (typeof participations !== 'undefined' && participations.length > 0) { %>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      <% participations.forEach(participation => { %>
+        <div class="col">
+          <a href="/participation/join/detail/<%= participation.id %>" class="text-decoration-none">
+            <div class="card h-100">
+              <img class="img-fluid" alt=""
+                src="http://res.cloudinary.com/denupn7gh/image/upload/v1702022886/YelpCamp/aktk7bswrwgozhg0z9zz.png">
+              <!-- <div class="card-body">
+                
+                <p class="card-text"><%= participation.description %></p>
+              </div> -->
+              <div class="card-footer">
+                <h5 class="card-title" style="color: black;"><%= participation.title %></h5>
+                <small class="text-muted">카테고리: <%= participation.budgets[0]?.category %></small>
+                <br>
+                <small class="text-muted">작성자: <%= participation.user.username %> 작성일: <%= participation.createdAt.toLocaleDateString() %></small>
+                
+              </div>
+            </div>
+          </a>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p>현재 참여 내역이 없습니다.</p>
+  <% } %>
+
+  
+</div>
