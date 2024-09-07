@@ -7,7 +7,7 @@ import session = require('express-session');
 import flash = require('connect-flash');
 import passport = require('passport');
 import { HttpException, HttpStatus } from '@nestjs/common';
-
+declare const module: any;
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
@@ -82,6 +82,10 @@ async function bootstrap() {
   });
 
   await app.listen(3000);
+  if (module.hot) {
+    module.hot.accept();
+    module.hot.dispose(() => app.close());
+  }
 }
 
 bootstrap();
