@@ -1,0 +1,46 @@
+<% layout('layouts/boilerplate') %>
+
+<div class="container mt-4">
+  <h2>게시글 수정</h2>
+  <form id="editForm">
+    <div class="mb-3">
+      <label for="title" class="form-label">제목</label>
+      <input type="text" class="form-control" id="title" name="title" value="<%= board.title %>" required>
+    </div>
+    <div class="mb-3">
+      <label for="content" class="form-label">내용</label>
+      <textarea class="form-control" id="content" name="content" rows="5" required><%= board.content %></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">수정 완료</button>
+    <a href="/board/<%= board.id %>" class="btn btn-secondary">취소</a>
+  </form>
+</div>
+
+<script>
+document.getElementById('editForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = document.getElementById('title').value;
+  const content = document.getElementById('content').value;
+
+  try {
+    const response = await fetch(`/board/<%= board.id %>`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title, content }),
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      alert('게시글이 성공적으로 수정되었습니다.');
+      window.location.href = `/board/<%= board.id %>`;
+    } else {
+      throw new Error('Failed to update board');
+    }
+  } catch (error) {
+    console.error('Update board error:', error);
+    alert('게시글 수정에 실패했습니다.');
+  }
+});
+</script>

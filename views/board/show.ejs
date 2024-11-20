@@ -1,0 +1,321 @@
+<% layout('layouts/boilerplate') %>
+
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-body">
+      <small class="text-muted"><%= board.category %></small>
+      <h4 class="card-title mt-2"><%= board.title %></h4>
+      <h6 class="card-subtitle mb-2 text-muted">
+        <%= board.author.username %> • <%= board.createdAt.toLocaleString() %>
+      </h6>
+      <p class="card-text mt-3"><%= board.content %></p>
+      <div class="d-flex justify-content-between align-items-center mt-4">
+        <div>
+          <span class="me-3">👁 <%= board.viewCount %></span>
+          <span class="me-3" id="likeCount">❤️ <%= board.likeCount %></span>
+          <span id="commentCountBrief">💬 <%= board.comments.length %></span>
+        </div>
+        <button class="btn btn-outline-danger btn-sm" id="likeButton" onclick="handleLike()">
+          ❤️ 좋아요
+        </button>
+      </div>
+      <% if (user && user.id === board.author.id) { %>
+        <div class="mt-3">
+          <a href="/board/<%= board.id %>/edit" class="btn btn-primary btn-sm">수정</a>
+          <button class="btn btn-danger btn-sm" onclick="deleteBoard()">삭제</button>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+
+  <div class="mt-4">
+    <h6 id="commentCount">댓글 <%= board.comments.length %>개</h6>
+    <div id="commentsList">
+      <% if (board.comments && board.comments.length > 0) { %>
+        <% board.comments.forEach(comment => { %>
+          <div class="card mb-2" id="comment-<%= comment.id %>">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2 text-muted"><%= comment.author.username %></h6>
+              <p class="card-text comment-content"><%= comment.content %></p>
+              <small class="text-muted"><%= comment.createdAt.toLocaleString() %></small>
+              <% if (user && user.id === comment.author.id) { %>
+                <div class="mt-2">
+                  <button class="btn btn-sm btn-outline-primary edit-comment" data-comment-id="<%= comment.id %>">수정</button>
+                  <button class="btn btn-sm btn-outline-danger delete-comment" data-comment-id="<%= comment.id %>">삭제</button>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <p>아직 댓글이 없습니다.</p>
+      <% } %>
+    </div>
+    
+    <% if (user) { %>
+      <form onsubmit="addComment(event)" class="mt-3">
+        <div class="input-group">
+          <input type="text" class="form-control" id="commentContent" placeholder="댓글을 입력하세요" required>
+          <button class="btn btn-primary" type="submit">등록</button>
+        </div>
+      </form>
+    <% } else { %>
+      <p class="mt-3">댓글을 작성하려면 <a href="/users/login">로그인</a>하세요.</p>
+    <% } %>
+  </div>
+</div>
+
+<script>
+  let isLiked = <%= locals.user ? board.likedByUsers.some(u => u.id === locals.user.id) : false %>;
+  
+  // 게시글 관련 함수들...
+  async function editBoard() {
+    window.location.href = `/board/<%= board.id %>/edit`;
+  }
+  
+  async function deleteBoard() {
+    if (!confirm('정말로 이 게시글을 삭제하시겠습니까?')) return;
+  
+    try {
+      const response = await fetch(`/board/<%= board.id %>`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+  
+      const result = await response.json();
+  
+      if (response.ok) {
+        alert(result.message);
+        window.location.href = '/board/index';
+      } else {
+        throw new Error(result.message || '게시글 삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Delete board error:', error);
+      alert(error.message || '게시글 삭제에 실패했습니다.');
+    }
+  }
+  
+  // 좋아요 관련 함수들...
+  document.addEventListener('DOMContentLoaded', function() {
+    updateLikeButton();
+    attachCommentEventListeners(); // 초기 이벤트 리스너 설정
+  });
+  
+  function updateLikeButton() {
+    const likeButton = document.getElementById('likeButton');
+    if (!likeButton) return;
+  
+    if (isLiked) {
+      likeButton.classList.add('btn-danger');
+      likeButton.classList.remove('btn-outline-danger');
+    } else {
+      likeButton.classList.remove('btn-danger');
+      likeButton.classList.add('btn-outline-danger');
+    }
+  }
+  
+  async function handleLike() {
+    try {
+      const response = await fetch(`/board/<%= board.id %>/like`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const result = await response.json();
+        document.getElementById('likeCount').textContent = `❤️ ${result.likeCount}`;
+        isLiked = result.liked;
+        updateLikeButton();
+      } else if (response.status === 401) {
+        alert('좋아요 기능을 사용하려면 로그인이 필요합니다.');
+        window.location.href = '/users/login';
+      } else {
+        throw new Error('Failed to toggle like');
+      }
+    } catch (error) {
+      console.error('Toggle like error:', error);
+      alert('좋아요 토글에 실패했습니다.');
+    }
+  }
+  
+  // 댓글 관련 함수들...
+  async function addComment(event) {
+    event.preventDefault();
+    const contentInput = document.getElementById('commentContent');
+    const content = contentInput.value;
+    
+    try {
+      const response = await fetch(`/board/<%= board.id %>/comment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const newComment = await response.json();
+        addCommentToDOM(newComment);
+        contentInput.value = ''; // 입력창 초기화
+        updateCommentCount(1);
+        
+        // "아직 댓글이 없습니다" 메시지 제거
+        const noCommentsMessage = document.querySelector('#commentsList p');
+        if (noCommentsMessage && noCommentsMessage.textContent === '아직 댓글이 없습니다.') {
+          noCommentsMessage.remove();
+        }
+      } else if (response.status === 401) {
+        alert('댓글을 작성하려면 로그인이 필요합니다.');
+        window.location.href = '/users/login';
+      } else {
+        throw new Error('Failed to add comment');
+      }
+    } catch (error) {
+      console.error('Add comment error:', error);
+    }
+  }
+  
+  function addCommentToDOM(comment) {
+    const commentsList = document.getElementById('commentsList');
+    const commentElement = document.createElement('div');
+    commentElement.className = 'card mb-2';
+    commentElement.id = `comment-${comment.id}`;
+    
+    commentElement.innerHTML = `
+      <div class="card-body">
+        <h6 class="card-subtitle mb-2 text-muted">${comment.author.username}</h6>
+        <p class="card-text comment-content">${comment.content}</p>
+        <small class="text-muted">${new Date(comment.createdAt).toLocaleString()}</small>
+        <div class="mt-2">
+          <button class="btn btn-sm btn-outline-primary edit-comment" data-comment-id="${comment.id}">수정</button>
+          <button class="btn btn-sm btn-outline-danger delete-comment" data-comment-id="${comment.id}">삭제</button>
+        </div>
+      </div>
+    `;
+    
+    // 새 댓글을 목록의 맨 위에 추가
+    if (commentsList.firstChild) {
+      commentsList.insertBefore(commentElement, commentsList.firstChild);
+    } else {
+      commentsList.appendChild(commentElement);
+    }
+  
+    // 새 댓글에 이벤트 리스너 추가
+    attachCommentEventListeners(commentElement);
+  }
+  
+  // 댓글 이벤트 리스너 설정 함수
+  function attachCommentEventListeners(container = document) {
+    // 수정 버튼 이벤트 리스너
+    container.querySelectorAll('.edit-comment').forEach(button => {
+      button.addEventListener('click', handleCommentEdit);
+    });
+  
+    // 삭제 버튼 이벤트 리스너
+    container.querySelectorAll('.delete-comment').forEach(button => {
+      button.addEventListener('click', handleCommentDelete);
+    });
+  }
+  
+  // 댓글 수정 핸들러
+  async function handleCommentEdit(e) {
+    const commentId = e.target.getAttribute('data-comment-id');
+    const commentCard = document.getElementById(`comment-${commentId}`);
+    const contentElement = commentCard.querySelector('.comment-content');
+    const currentContent = contentElement.textContent;
+  
+    const input = document.createElement('textarea');
+    input.value = currentContent;
+    input.className = 'form-control mb-2';
+    contentElement.replaceWith(input);
+  
+    const saveButton = document.createElement('button');
+    saveButton.textContent = '저장';
+    saveButton.className = 'btn btn-sm btn-primary mr-2';
+    
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = '취소';
+    cancelButton.className = 'btn btn-sm btn-secondary';
+  
+    saveButton.addEventListener('click', async () => {
+      try {
+        const response = await fetch(`/board/<%= board.id %>/comment/${commentId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ content: input.value }),
+          credentials: 'include'
+        });
+  
+        if (response.ok) {
+          const updatedComment = await response.json();
+          contentElement.textContent = updatedComment.content;
+          input.replaceWith(contentElement);
+          saveButton.remove();
+          cancelButton.remove();
+        } else {
+          throw new Error('Failed to update comment');
+        }
+      } catch (error) {
+        console.error('Update comment error:', error);
+        alert('댓글 수정에 실패했습니다.');
+      }
+    });
+  
+    cancelButton.addEventListener('click', () => {
+      input.replaceWith(contentElement);
+      saveButton.remove();
+      cancelButton.remove();
+    });
+  
+    commentCard.querySelector('.card-body').appendChild(saveButton);
+    commentCard.querySelector('.card-body').appendChild(cancelButton);
+  }
+  
+  // 댓글 삭제 핸들러
+  async function handleCommentDelete(e) {
+    if (!confirm('정말로 이 댓글을 삭제하시겠습니까?')) return;
+  
+    const commentId = e.target.getAttribute('data-comment-id');
+    try {
+      const response = await fetch(`/board/<%= board.id %>/comment/${commentId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+  
+      if (response.ok) {
+        const commentElement = document.getElementById(`comment-${commentId}`);
+        if (commentElement) {
+          commentElement.remove();
+          updateCommentCount(-1);
+          
+          // 댓글이 모두 삭제되었는지 확인
+          const commentsList = document.getElementById('commentsList');
+          if (commentsList.children.length === 0) {
+            commentsList.innerHTML = '<p>아직 댓글이 없습니다.</p>';
+          }
+        }
+      } else {
+        throw new Error('Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Delete comment error:', error);
+      alert('댓글 삭제에 실패했습니다.');
+    }
+  }
+  
+  function updateCommentCount(change) {
+    const commentCountElement = document.getElementById('commentCount');
+    const commentCountBriefElement = document.getElementById('commentCountBrief');
+    const currentCount = parseInt(commentCountElement.textContent.match(/\d+/)[0]);
+    const newCount = currentCount + change;
+    commentCountElement.textContent = `댓글 ${newCount}개`;
+    commentCountBriefElement.textContent = `💬 ${newCount}`;
+  }
+  </script>

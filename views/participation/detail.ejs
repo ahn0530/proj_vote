@@ -13,11 +13,16 @@
       <p class="card-text">투표 수: <%= participation.voteCount %></p>
       
       <% if (user) { %>
-        <% if (!hasVoted) { %>
-          <button class="btn btn-primary" onclick="confirmVote()">투표하기</button>
-        <% } else { %>
-          <button class="btn btn-secondary" disabled>이미 투표함</button>
-        <% } %>
+        <div id="metamaskSection">
+          <% if (hasVoted) { %>
+            <button class="btn btn-secondary" disabled>투표 완료</button>
+          <% } else { %>
+            <button class="btn btn-primary" id="connectWallet">MetaMask 연결</button>
+            <button class="btn btn-success" id="voteButton" style="display: none;">투표하기</button>
+          <% } %>
+          <p id="walletAddress" class="mt-2"></p>
+          <div id="votingStatus" class="alert alert-info" style="display: none;"></div>
+        </div>
       <% } else { %>
         <a href="/users/login" class="btn btn-primary">로그인하여 투표하기</a>
       <% } %>
@@ -28,13 +33,155 @@
 </div>
 
 <script>
-function confirmVote() {
-  if (confirm('정말로 투표하시겠습니까?')) {
-    document.getElementById('voteForm').submit();
+let userAddress = null;
+const proposalId = <%= participation.id %>;
+
+async function connectWallet() {
+  if (typeof window.ethereum !== 'undefined') {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      userAddress = accounts[0];
+      
+      // 지갑 주소로 이미 투표했는지 확인
+      const response = await fetch(`/participation/join/detail/${proposalId}/check-wallet?address=${userAddress}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+      });
+      
+      const result = await response.json();
+      
+      if (result.hasVoted) {
+        document.getElementById('metamaskSection').innerHTML = `
+          <div class="alert alert-warning">
+            이 지갑 주소(${userAddress.substring(0, 6)}...${userAddress.substring(38)})로 이미 투표하셨습니다.
+          </div>
+          <button class="btn btn-secondary" disabled>투표 완료</button>
+        `;
+        return;
+      }
+
+      // 지갑 연결 표시 및 투표 버튼 활성화
+      document.getElementById('walletAddress').textContent = `연결된 지갑: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+      document.getElementById('connectWallet').style.display = 'none';
+      document.getElementById('voteButton').style.display = 'block';
+      
+      // 네트워크 확인 및 전환
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      if (chainId !== '0xaa36a7') {
+        await switchToSepolia();
+      }
+    } catch (error) {
+      console.error(error);
+      alert('지갑 연결에 실패했습니다.');
+    }
+  } else {
+    alert('MetaMask를 설치해주세요!');
   }
 }
-</script>
+  
+async function vote() {
+  if (!userAddress) {
+    alert('먼저 지갑을 연결해주세요.');
+    return;
+  }
 
-<form id="voteForm" action="/participation/join/detail/<%= participation.id %>/vote" method="POST" style="display: none;">
-  <!-- CSRF 토큰 등 필요한 hidden 필드 추가 -->
-</form>
+  const votingStatus = document.getElementById('votingStatus');
+  const voteButton = document.getElementById('voteButton');
+  
+  votingStatus.style.display = 'block';
+  votingStatus.textContent = '투표 처리 중...';
+  voteButton.disabled = true;
+
+  try {
+    const response = await fetch(`/participation/join/detail/${proposalId}/vote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ userAddress })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || '투표 처리 중 오류가 발생했습니다.');
+    }
+
+    if (result.txHash) {
+      votingStatus.innerHTML = `
+        투표가 성공적으로 처리되었습니다!<br>
+        트랜잭션 해시: <a href="https://sepolia.etherscan.io/tx/${result.txHash}" target="_blank">${result.txHash}</a>
+      `;
+    } else {
+      votingStatus.textContent = '투표가 성공적으로 처리되었습니다!';
+    }
+
+    // 투표 버튼을 "투표 완료" 버튼으로 교체
+    const metamaskSection = document.getElementById('metamaskSection');
+    metamaskSection.innerHTML = '<button class="btn btn-secondary" disabled>투표 완료</button>';
+    
+    // 투표 수 업데이트 (선택사항)
+    const voteCountElement = document.querySelector('.card-text:last-of-type');
+    if (voteCountElement) {
+      const currentCount = parseInt(voteCountElement.textContent.split(': ')[1]);
+      voteCountElement.textContent = `투표 수: ${currentCount + 1}`;
+    }
+
+  } catch (error) {
+    console.error('Vote error:', error);
+    votingStatus.textContent = error.message || '투표 처리 중 오류가 발생했습니다.';
+    voteButton.disabled = false;
+  }
+}
+
+// MetaMask 계정 변경 감지
+if (typeof window.ethereum !== 'undefined') {
+  window.ethereum.on('accountsChanged', function (accounts) {
+    if (accounts.length === 0) {
+      userAddress = null;
+      document.getElementById('connectWallet').style.display = 'block';
+      document.getElementById('voteButton').style.display = 'none';
+      document.getElementById('walletAddress').textContent = '';
+    } else {
+      userAddress = accounts[0];
+      document.getElementById('walletAddress').textContent = 
+        `연결된 지갑: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+    }
+  });
+}
+
+async function switchToSepolia() {
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0xaa36a7' }], // Sepolia chainId
+    });
+  } catch (error) {
+    if (error.code === 4902) {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0xaa36a7',
+          chainName: 'Sepolia',
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+          rpcUrls: ['https://eth-sepolia.g.alchemy.com/v2'],
+          blockExplorerUrls: ['https://sepolia.etherscan.io']
+        }]
+      });
+    }
+  }
+}
+
+// 이벤트 리스너 등록
+if (document.getElementById('connectWallet')) {
+  document.getElementById('connectWallet').addEventListener('click', connectWallet);
+}
+if (document.getElementById('voteButton')) {
+  document.getElementById('voteButton').addEventListener('click', vote);
+}
+</script>

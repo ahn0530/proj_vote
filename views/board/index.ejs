@@ -1,0 +1,24 @@
+<% layout('layouts/boilerplate') %>
+
+<div class="container mt-4">
+  <h1 class="mb-4">게시판</h1>
+  
+  <a href="/board/create" class="btn btn-primary mb-3">새 글 작성</a>
+  
+  <% if (boards && boards.length > 0) { %>
+    <div class="list-group">
+      <% boards.forEach(board => { %>
+        <a href="/board/<%= board.id %>" class="list-group-item list-group-item-action">
+          <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1"><%= board.title %></h5>
+            <small><%= board.createdAt ? board.createdAt.toLocaleDateString() : 'N/A' %></small>
+          </div>
+          <p class="mb-1"><%= board.content.substring(0, 100) %>...</p>
+          <small>작성자: <%= board.author ? board.author.username : 'Unknown' %></small>
+        </a>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p>게시글이 없습니다.</p>
+  <% } %>
+</div>
