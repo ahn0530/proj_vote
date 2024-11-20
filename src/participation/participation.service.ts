@@ -36,7 +36,7 @@ export class ParticipationService {
     });
     await this.participationRepository.save(participation);
 
-    await this.budgetItemsService.createBudgetItem(participationData.category, participation.id);
+    await this.budgetItemsService.createBudgetItem(participationData.category);
 
     return this.participationRepository.findOne({ 
       where: { id: participation.id },

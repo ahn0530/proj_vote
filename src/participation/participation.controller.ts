@@ -1,17 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, Res, Render, NotFoundException, ConflictException } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { SessionAuthGuard } from '../auth/session.auth.guard';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Res, Render, 
+  NotFoundException, ConflictException, BadRequestException, Query, InternalServerErrorException } from '@nestjs/common';
 import { ParticipationService } from './participation.service';
 import { BudgetItemsService } from '../budget-items/budget-items.service';
 import { BudgetCategory } from '../budget-items/budget-item.entity';
 import { Request, Response } from 'express';
-import { User } from 'src/users/user.entity';
+import { LocalAuthGuard } from 'src/auth/local.authGuard';
+import { BlockchainService } from '../blockchain/blockchain.service';
 
 @Controller('participation')
 export class ParticipationController {
   constructor(
     private readonly participationService: ParticipationService,
-    private readonly budgetItemsService: BudgetItemsService
+    private readonly budgetItemsService: BudgetItemsService,
+    private readonly blockchainService: BlockchainService
   ) {}
 
   @Get('index')
@@ -45,24 +46,23 @@ export class ParticipationController {
       if (!participation) {
         throw new NotFoundException('Participation not found');
       }
-      res.render('participation/detail', { participation,user: req.user, hasVoted });
+      res.render('participation/detail', { participation, user: req.user, hasVoted });
     } catch (error) {
       res.status(404).render('error', { message: 'Participation not found' });
     }
   }
 
-  @Post('join/detail/:id/vote')
-  @UseGuards(SessionAuthGuard)
-  async vote(@Param('id') id: string, @Req() req: any, @Res() res: Response) {
+  @Get('join/detail/:id/check-wallet')
+  async checkWalletVote(
+    @Param('id') id: string,
+    @Query('address') address: string
+  ) {
     try {
-      await this.participationService.vote(Number(id), req.user.id);
-      res.redirect(`/participation/join/detail/${id}`);
+      const hasVoted = await this.blockchainService.hasVoted(Number(id), address);
+      return { hasVoted };
     } catch (error) {
-      if (error instanceof ConflictException) {
-        res.status(400).render('error', { message: 'You have already voted' });
-      } else {
-        res.status(500).render('error', { message: 'An error occurred while voting' });
-      }
+      console.error('지갑 투표 상태 확인 중 오류:', error);
+      throw new InternalServerErrorException('지갑 투표 상태를 확인하는 중 오류가 발생했습니다.');
     }
   }
 
@@ -82,7 +82,7 @@ export class ParticipationController {
   }
   
   @Post('submit')
-  @UseGuards(SessionAuthGuard)
+  @UseGuards(LocalAuthGuard)
   async submitParticipation(
     @Req() req: Request, 
     @Body() body: {
@@ -94,16 +94,79 @@ export class ParticipationController {
   ) {
     try {
       const userId = req.user['id'];
-      await this.participationService.submitParticipation(userId, body);
+      
+      // 1. DB에 참여 정보 저장
+      const participation = await this.participationService.submitParticipation(userId, body);
+      
+      // 2. 블록체인 작업을 비동기로 처리
+      this.blockchainService.createProposal(
+        participation.id,
+        participation.title
+      ).catch(error => {
+        console.error('블록체인 제안 생성 중 오류:', error);
+        // 필요한 경우 여기서 추가적인 오류 처리
+      });
+  
+      // 3. 사용자를 즉시 리다이렉트
       res.redirect('/participation/join');
     } catch (error) {
       console.error('참여 제출 중 오류 발생:', error);
-      res.status(500).json({ error: '참여 제출 중 오류가 발생했습니다.' });
+      res.status(500).render('error', { message: '참여 제출 중 오류가 발생했습니다.' });
+    }
+  }
+
+  @Post('join/detail/:id/vote')
+  @UseGuards(LocalAuthGuard)
+  async vote(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body('userAddress') userAddress: string,
+    @Res() res: Response
+  ) {
+    try {
+      console.log('Vote request received:', {
+        participationId: id,
+        userId: req.user.id,
+        userAddress: userAddress
+      });
+  
+      if (!userAddress) {
+        throw new BadRequestException('MetaMask 지갑 주소가 필요합니다.');
+      }
+  
+      // 블록체인 투표
+      const blockchainResult = await this.blockchainService.vote(Number(id), userAddress);
+      
+      // DB 투표
+      await this.participationService.vote(Number(id), req.user.id);
+  
+      // JSON 응답 반환
+      return res.json({
+        success: true,
+        txHash: blockchainResult.txHash,
+        message: '투표가 성공적으로 처리되었습니다.'
+      });
+  
+    } catch (error) {
+      console.error('Vote error:', error);
+      
+      if (error instanceof ConflictException) {
+        return res.status(409).json({ message: '이미 투표하셨습니다.' });
+      } else if (error instanceof BadRequestException) {
+        return res.status(400).json({ message: error.message });
+      } else if (error instanceof NotFoundException) {
+        return res.status(404).json({ message: error.message });
+      } else {
+        return res.status(500).json({ 
+          message: '투표 처리 중 오류가 발생했습니다.',
+          details: error.message 
+        });
+      }
     }
   }
   
   @Get('check')
-  @UseGuards(AuthGuard('session'))
+  @UseGuards(LocalAuthGuard)
   async checkParticipation(@Req() req: Request) {
     try {
       const userId = req.user['id'];
