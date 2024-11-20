@@ -1,22 +1,23 @@
 import { Controller, Post, UseGuards, Req, Res, Body } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
+import { LocalAuthGuard } from './local.authGuard';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @UseGuards(AuthGuard('local'))
   @Post('login')
+  @UseGuards(LocalAuthGuard)
   async login(@Req() req: Request, @Res() res: Response, @Body('returnTo') returnTo?: string) {
     try {
       if (!req.user) {
-        return res.redirect('/users/login');
+        console.error('Login failed: No user object');
+        return res.redirect('/users/login?error=Invalid credentials');
       }
 
       const result = await this.authService.login(req.user);
-      req.session.user = result.user;
+      req.user = result;
       
       if (returnTo) {
         return res.redirect(decodeURIComponent(returnTo));
@@ -24,7 +25,7 @@ export class AuthController {
       return res.redirect('/participation/index');
     } catch (error) {
       console.error('Login error:', error);
-      return res.redirect('/users/login');
+      return res.redirect('/users/login?error=Login failed');
     }
   }
 
