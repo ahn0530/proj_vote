@@ -3,6 +3,7 @@
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
+    "esModuleInterop": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
@@ -16,15 +17,6 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
-    "resolveJsonModule": true,      // 추가된 부분
-    "esModuleInterop": true         // 추가된 부분
-  },
-
-  "include": [
-    "src/**/*",
-    "artifacts/**/*"    // 추가된 부분
-  ],
-  //"include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+    "noFallthroughCasesInSwitch": false
+  }
 }

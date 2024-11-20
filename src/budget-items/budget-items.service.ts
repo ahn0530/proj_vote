@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BudgetItem, BudgetCategory } from './budget-item.entity';
@@ -33,13 +33,13 @@ export class BudgetItemsService {
     return Object.values(BudgetCategory);
   }
 
-  async createBudgetItem(category: BudgetCategory, participationId: number): Promise<BudgetItem> {
+  async createBudgetItem(category: BudgetCategory): Promise<BudgetItem> {
     const budgetItem = this.budgetItemRepository.create({ 
-      category,
-      participation: { id: participationId }
+      category
     });
     return this.budgetItemRepository.save(budgetItem);
   }
+
 
   async updateBudgetItem(category: BudgetCategory): Promise<BudgetItem> {
     const budgetItem = await this.budgetItemRepository.findOne({ where: { category } });

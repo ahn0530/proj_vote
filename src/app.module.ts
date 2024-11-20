@@ -7,6 +7,8 @@ import { ParticipationModule } from './participation/participation.module';
 import { AuthModule } from './auth/auth.module';
 import { BudgetItemsModule } from './budget-items/budget-items.module';
 import { AppController } from './app.controller';
+import { BoardModule } from './board/board.module';
+import { BlockchainModule } from './blockchain/blockchain.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { AppController } from './app.controller';
     ParticipationModule,
     AuthModule,
     BudgetItemsModule,
+    BoardModule,
+    BlockchainModule
   ],
   controllers: [AppController]
 })
