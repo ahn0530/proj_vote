@@ -14,8 +14,8 @@ export class LocalAuthGuard extends AuthGuard('local') {
         }
 
         try {
-            const result = await super.canActivate(context);
-            await super.logIn(request);
+            const result = await super.canActivate(context); //부모 클래스(AuthGuard)의 인증 로직 실행
+            await super.logIn(request); //인증 성공 시 세션에 로그인 상태 저장
             return result as boolean;
         } catch (error) {
             console.error('LocalAuthGuard error:', error);

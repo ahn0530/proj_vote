@@ -1,7 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
 import { LocalStrategy } from './local.strategy';
 import { UsersModule } from '../users/users.module';
 import { LocalSerializer } from './local.serializer';
@@ -17,7 +16,6 @@ import { User } from 'src/users/user.entity';
     TypeOrmModule.forFeature([User]),
   ],
   providers: [AuthService, LocalStrategy, LocalSerializer, LocalAuthGuard],
-  controllers: [AuthController],
   exports: [AuthService],
 })
 export class AuthModule {}
