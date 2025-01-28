@@ -93,21 +93,22 @@ export class ParticipationController {
     @Res() res: Response
   ) {
     try {
-      const userId = req.user['id'];
-      
       // 1. DB에 참여 정보 저장
-      const participation = await this.participationService.submitParticipation(userId, body);
-      
-      // 2. 블록체인 작업을 비동기로 처리
+      const participation = await this.participationService.submitParticipation(
+        req.user['id'],
+        body
+      );
+
+      // 2. 블록체인에 제안 생성 - await로 완료 대기
       this.blockchainService.createProposal(
         participation.id,
         participation.title
       ).catch(error => {
-        console.error('블록체인 제안 생성 중 오류:', error);
+        
         // 필요한 경우 여기서 추가적인 오류 처리
       });
   
-      // 3. 사용자를 즉시 리다이렉트
+      // 3. 모든 작업이 완료된 후 리다이렉트
       res.redirect('/participation/join');
     } catch (error) {
       console.error('참여 제출 중 오류 발생:', error);
@@ -118,7 +119,7 @@ export class ParticipationController {
   @Post('join/detail/:id/vote')
   @UseGuards(LocalAuthGuard)
   async vote(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Req() req: any,
     @Body('userAddress') userAddress: string,
     @Res() res: Response
@@ -134,16 +135,28 @@ export class ParticipationController {
         throw new BadRequestException('MetaMask 지갑 주소가 필요합니다.');
       }
   
-      // 블록체인 투표
+      // // 1. 블록체인 투표 여부 먼저 확인
+      const hasVotedOnChain = await this.blockchainService.hasVoted(Number(id), userAddress);
+      if (hasVotedOnChain) {
+        throw new ConflictException('이미 이 지갑으로 투표하셨습니다.');
+      }
+  
+      // // 2. DB 투표 여부 확인
+      const hasVotedInDB = await this.participationService.hasUserVoted(Number(id), req.user.id);
+      if (hasVotedInDB) {
+        throw new ConflictException('이미 이 계정으로 투표하셨습니다.');
+      }
+  
+      // 3. 블록체인 투표 실행
       const blockchainResult = await this.blockchainService.vote(Number(id), userAddress);
       
-      // DB 투표
-      await this.participationService.vote(Number(id), req.user.id);
+      // 4. DB 투표 실행
+      const updatedParticipation = await this.participationService.vote(Number(id), req.user.id);
   
-      // JSON 응답 반환
       return res.json({
         success: true,
-        txHash: blockchainResult.txHash,
+        txHash: blockchainResult,
+        voteCount: updatedParticipation.voteCount,
         message: '투표가 성공적으로 처리되었습니다.'
       });
   

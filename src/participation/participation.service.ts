@@ -3,19 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Participation } from './participation.entity';
 import { User } from '../users/user.entity';
-import { BudgetItemsService } from '../budget-items/budget-items.service';
 import { BudgetCategory } from '../budget-items/budget-item.entity';
 
 @Injectable()
 export class ParticipationService {
-  private readonly logger = new Logger(ParticipationService.name);
-
   constructor(
     @InjectRepository(Participation)
     private participationRepository: Repository<Participation>,
     @InjectRepository(User)
-    private userRepository: Repository<User>,
-    private budgetItemsService: BudgetItemsService
+    private userRepository: Repository<User>
   ) {}
 
   async submitParticipation(userId: number, participationData: {
@@ -23,39 +19,33 @@ export class ParticipationService {
     description: string,
     category: BudgetCategory
   }): Promise<Participation> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+  const user = await this.userRepository.findOne({ where: { id: userId } });
+  if (!user) throw new NotFoundException('User not found');
 
-    const participation = this.participationRepository.create({
-      user,
-      title: participationData.title,
-      description: participationData.description,
-      imageUrl: 'https://example.com/default-image.jpg' // 기본 이미지 URL
-    });
-    await this.participationRepository.save(participation);
-
-    await this.budgetItemsService.createBudgetItem(participationData.category);
-
-    return this.participationRepository.findOne({ 
-      where: { id: participation.id },
-      relations: ['user', 'budgets']
-    });
+  const participation = this.participationRepository.create({
+    user,
+    title: participationData.title,
+    description: participationData.description,
+    category: participationData.category,
+    imageUrl: 'https://example.com/default-image.jpg'
+  });
+  return this.participationRepository.save(participation);
   }
 
   async getAllParticipations(): Promise<Participation[]> {
-    try {
-      const participations = await this.participationRepository.find({
-        relations: ['user', 'budgets'],
-        order: { createdAt: 'DESC' }
-      });
-      this.logger.log(`Retrieved ${participations.length} participations`);
-      return participations;
-    } catch (error) {
-      this.logger.error(`Error retrieving participations: ${error.message}`, error.stack);
-      throw error;
-    }
+    return this.participationRepository.find({
+    relations: ['user', 'votedUsers'],
+    order: { createdAt: 'DESC' }
+    });
+  }
+
+  async getParticipationById(id: number): Promise<Participation> {
+    const participation = await this.participationRepository.findOne({
+      where: { id },
+      relations: ['user', 'votedUsers'],
+    });
+    if (!participation) throw new NotFoundException(`Participation not found`);
+    return participation;
   }
 
   async checkParticipation(userId: number): Promise<{ participated: boolean; participationId?: number }> {
@@ -64,17 +54,6 @@ export class ParticipationService {
       return { participated: true, participationId: participation.id };
     }
     return { participated: false };
-  }
-
-  async getParticipationById(id: number): Promise<Participation> {
-    const participation = await this.participationRepository.findOne({
-      where: { id },
-      relations: ['user', 'budgets','votedUsers'],
-    });
-    if (!participation) {
-      throw new NotFoundException(`Participation with ID ${id} not found`);
-    }
-    return participation;
   }
 
   async vote(participationId: number, userId: number): Promise<Participation> {

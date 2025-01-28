@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, ManyToMany, JoinTable } from 'typeorm';
 import { User } from '../users/user.entity';
-import { BudgetItem } from '../budget-items/budget-item.entity';
+import { BudgetCategory } from '../budget-items/budget-item.entity';
 
 @Entity()
 export class Participation {
@@ -19,8 +19,11 @@ export class Participation {
   @ManyToOne(() => User, user => user.participations)
   user: User;
 
-  @OneToMany(() => BudgetItem, budgetItem => budgetItem.participation, { cascade: true })
-  budgets: BudgetItem[];
+  @Column({
+    type: 'enum',
+    enum: BudgetCategory
+  })
+  category: BudgetCategory;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -31,4 +34,7 @@ export class Participation {
   @ManyToMany(() => User)
   @JoinTable()
   votedUsers: User[];
+
+  @Column('text', { array: true, default: [] })
+  votedWallets: string[];
 }
