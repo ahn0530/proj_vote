@@ -23,12 +23,6 @@ export class UsersRepository {
     return this.repository.findOne({ where: { id } });
   }
 
-  async findByEmailOrUsername(email: string, username: string): Promise<User | undefined> {
-    return this.repository.findOne({ 
-      where: [{ email }, { username }] 
-    });
-  }
-
   async save(user: User): Promise<User> {
     return this.repository.save(user);
   }
