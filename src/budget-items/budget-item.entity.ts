@@ -1,5 +1,4 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Participation } from '../participation/participation.entity';
 
 export enum BudgetCategory {
   HEALTH_WELFARE_EMPLOYMENT = '보건•복지•고용',
@@ -14,19 +13,4 @@ export enum BudgetCategory {
   ENVIRONMENT = '환경',
   CULTURE_SPORTS_TOURISM = '문화•체육•관광',
   DIPLOMACY_UNIFICATION = '외교•통일'
-}
-
-@Entity()
-export class BudgetItem {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({
-    type: 'enum',
-    enum: BudgetCategory
-  })
-  category: BudgetCategory;
-
-  @ManyToOne(() => Participation, participation => participation.budgets, { nullable: true })
-  participation: Participation;
 }
