@@ -1,4 +1,7 @@
-// src/blockchain/blockchain.service.ts
+// --- Debugging contract address issue ---
+// The error "Contract Address: undefined" suggests that the contract address is not being properly initialized.
+// Let's ensure the contract address is loaded and correctly passed during initialization.
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ethers } from 'ethers';
 import { readFileSync } from 'fs';
@@ -7,72 +10,82 @@ import { join } from 'path';
 @Injectable()
 export class BlockchainService {
   private provider: ethers.JsonRpcProvider;
-  private contract: ethers.Contract;
+  private contract: ethers.Contract | null = null;
   private signer: ethers.Wallet;
 
   constructor() {
     try {
-      // 여러 가능한 경로 시도
-      const possiblePaths = [
-        join(process.cwd(), 'artifacts/contracts/Voting.sol/Voting.json'),
-        join(__dirname, '../../artifacts/contracts/Voting.sol/Voting.json'),
-        join(process.cwd(), '../artifacts/contracts/Voting.sol/Voting.json')
-      ];
+      const abiPath = process.env.ABI_PATH || join(process.cwd(), 'artifacts/contracts/Voting.sol/Voting.json');
+      const abi = JSON.parse(readFileSync(abiPath, 'utf8')).abi;
 
-      let artifactContent = null;
-      let usedPath = '';
+      // Load and validate environment variables
+      const { contractAddress, privateKey, rpcUrl } = this.validateEnvVariables();
 
-      // 가능한 경로들을 순회하면서 파일 찾기
-      for (const path of possiblePaths) {
-        try {
-          console.log('Trying path:', path);  // 시도하는 경로 로깅
-          artifactContent = readFileSync(path, 'utf8');
-          usedPath = path;
-          break;
-        } catch (err) {
-          console.log('Failed to read from path:', path);  // 실패한 경로 로깅
-        }
-      }
+      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+      this.signer = new ethers.Wallet(privateKey, this.provider);
 
-      if (!artifactContent) {
-        throw new Error('Could not find Voting.json in any of the expected locations');
-      }
-
-      console.log('Successfully found artifact at:', usedPath);  // 성공한 경로 로깅
-      
-      const artifact = JSON.parse(artifactContent);
-      
-      if (!process.env.SEPOLIA_URL || !process.env.PRIVATE_KEY || !process.env.VOTE_CONTRACT_ADDRESS) {
-        throw new Error('Missing required environment variables');
-      }
-
-      this.provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_URL);
-      this.signer = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
-      this.contract = new ethers.Contract(
-        process.env.VOTE_CONTRACT_ADDRESS,
-        artifact.abi,
-        this.signer
-      );
-
-      console.log('BlockchainService initialized successfully');
+      // Initialize contract
+      this.contract = new ethers.Contract(contractAddress, abi, this.signer);
+      console.log('Contract initialized successfully with address:', this.contract.address);
     } catch (error) {
-      console.error('Failed to initialize blockchain service:', error);
-      throw new Error(`Failed to initialize blockchain service: ${error.message}`);
+      console.error('Error initializing BlockchainService:', error);
+      throw error;
     }
+  }
+
+  private validateEnvVariables() {
+    const contractAddress = process.env.VOTE_CONTRACT_ADDRESS;
+    const privateKey = process.env.PRIVATE_KEY;
+    const rpcUrl = process.env.SEPOLIA_URL;
+
+    console.log('Environment Variables:');
+    console.log('Contract Address:', contractAddress);
+    console.log('Private Key Loaded:', !!privateKey);
+    console.log('RPC URL:', rpcUrl);
+
+    if (!contractAddress) {
+      throw new Error('Contract address is missing. Verify your .env file.');
+    }
+    if (!privateKey) {
+      throw new Error('Private key is missing. Verify your .env file.');
+    }
+    if (!rpcUrl) {
+      throw new Error('RPC URL is missing. Verify your .env file.');
+    }
+
+    return { contractAddress, privateKey, rpcUrl };
   }
 
   async createProposal(id: number, title: string): Promise<void> {
     try {
+      console.log(`Creating proposal: ID=${id}, Title="${title}"`);
+
+      // Ensure contract is initialized
+      if (!this.contract) {
+        throw new Error('Contract is not initialized. Verify the constructor logic.');
+      }
+
+      // Debug: Log contract address and functions
+      console.log('Contract Address:', this.contract.address);
+      console.log('Available contract functions:', Object.keys(this.contract.functions || {}));
+
+      // Validate function existence
+      if (typeof this.contract.createProposal !== 'function') {
+        throw new Error('createProposal is not available on the contract instance. Verify ABI and deployment.');
+      }
+
+      // Send transaction
       const tx = await this.contract.createProposal(id, title);
+      console.log(`Transaction Hash: ${tx.hash}`);
       await tx.wait();
-      
-      // 제안 생성 후 활성화
-      await this.setProposalStatus(id, true);
+
+      console.log(`Proposal created successfully: ID=${id}`);
     } catch (error) {
-      console.error('Create proposal error:', error);
+      console.error('Blockchain Error:', error);
       throw error;
     }
   }
+
 
   async setProposalStatus(id: number, isActive: boolean): Promise<void> {
     try {
@@ -93,47 +106,57 @@ export class BlockchainService {
     }
   }
 
-  async vote(proposalId: number, userAddress: string): Promise<{txHash: string}> {
+  async isProposalActive(proposalId: number): Promise<boolean> {
     try {
-      console.log('Blockchain vote start:', { proposalId, userAddress });
-      
-      // 제안이 존재하고 활성화되어 있는지 확인
-      const isActive = await this.checkProposalExists(proposalId);
-      console.log('Proposal active status:', isActive);
-      
-      if (!isActive) {
-        throw new NotFoundException(`Proposal ${proposalId} is not active or does not exist`);
+      console.log(`Checking if proposal ${proposalId} is active...`);
+
+      if (!this.contract) {
+        throw new Error('Contract is not initialized. Verify the constructor logic.');
       }
 
-      const hasVoted = await this.contract.hasVoted(proposalId, userAddress);
-      console.log('Has voted status:', hasVoted);
-      
-      if (hasVoted) {
-        throw new Error('User has already voted');
+      // Fetch the proposal directly using `getProposal`
+      const [id, title, voteCount, isActive] = await this.contract.getProposal(proposalId);
+      console.log(`Fetched proposal: { id: ${id}, title: ${title}, voteCount: ${voteCount}, isActive: ${isActive} }`);
+
+      // Ensure the fetched ID matches the input ID
+      if (id.toString() !== proposalId.toString()) {
+        console.log(`Proposal ID mismatch. Expected ${proposalId}, but got ${id}`);
+        return false;
       }
-      
-      console.log('Sending vote transaction...');
-      const tx = await this.contract.vote(proposalId);
-      console.log('Transaction sent:', tx.hash);
-      
-      console.log('Waiting for transaction confirmation...');
-      const receipt = await tx.wait();
-      console.log('Transaction confirmed:', receipt);
-      
-      return {
-        txHash: receipt.hash
-      };
+
+      return isActive;
     } catch (error) {
-      console.error('Detailed vote error:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack,
-        data: error.data
-      });
-      throw error;
+      console.error('Error checking proposal status:', error);
+      return false;
     }
   }
 
+  async vote(proposalId: number, userAddress: string): Promise<void> {
+    try {
+      console.log(`Casting vote on proposal ${proposalId} by user ${userAddress}`);
+
+      if (!this.contract) {
+        throw new Error('Contract is not initialized. Verify the constructor logic.');
+      }
+
+      // Validate if the proposal is active
+      const isActive = await this.isProposalActive(proposalId);
+      if (!isActive) {
+        throw new Error(`Cannot vote: Proposal ${proposalId} is not active or does not exist.`);
+      }
+
+      // Cast vote
+      const tx = await this.contract.vote(proposalId);
+      console.log(`Transaction Hash: ${tx.hash}`);
+      await tx.wait();
+
+      console.log(`Vote cast successfully on proposal ${proposalId}`);
+    } catch (error) {
+      console.error('Error casting vote:', error);
+      throw error;
+    }
+  }
+  
   async getProposalVotes(proposalId: number): Promise<number> {
     try {
       const proposal = await this.contract.getProposal(proposalId);
