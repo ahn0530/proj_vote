@@ -17,6 +17,10 @@
     <td align="center">참여 상세<br><img src="docs/proj-vote-detail.png" width="400"/></td>
     <td align="center">투표 화면<br><img src="docs/proj-vote-vote.png" width="400"/></td>
   </tr>
+  <tr>
+    <td align="center">투표 중<br><img src="docs/proj-vote-voting.png" width="400"/></td>
+    <td align="center">투표 완료<br><img src="docs/proj-vote-voted.png" width="400"/></td>
+  </tr>
 </table>
 
 - 위 이미지는 로컬 실행 화면 캡쳐입니다.
