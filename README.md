@@ -4,9 +4,9 @@
 
 ## 데모 화면
 
-![Proj Vote Sample](docs/proj-vote-dashboard.png)
+![Proj Vote Screen](docs/proj-vote-dashboard.png)
 
-- 위 이미지는 샘플 데이터로 구성한 목업 화면입니다.
+- 위 이미지는 로컬 실행 화면 캡쳐입니다.
 
 ## 주요 기능
 
