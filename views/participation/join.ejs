@@ -1,5 +1,40 @@
 <% layout('layouts/boilerplate') %>
 
+<style>
+  .participation-cover {
+    position: relative;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 45%, #2c5364 100%);
+    border-bottom: 1px solid #e9ecef;
+    overflow: hidden;
+  }
+  .participation-cover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.25), transparent 35%),
+      radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.2), transparent 40%),
+      radial-gradient(circle at 30% 80%, rgba(255, 255, 255, 0.18), transparent 45%);
+    opacity: 0.9;
+  }
+  .participation-cover span {
+    position: relative;
+    z-index: 1;
+    padding: 0.35rem 0.9rem;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  }
+</style>
+
 <div class="container mt-4">
   <h1 class="mb-4">참여 목록</h1>
 
@@ -10,8 +45,9 @@
         <div class="col">
           <a href="/participation/join/detail/<%= participation.id %>" class="text-decoration-none">
             <div class="card h-100">
-              <img class="img-fluid" alt=""
-                src="http://res.cloudinary.com/denupn7gh/image/upload/v1702022886/YelpCamp/aktk7bswrwgozhg0z9zz.png">
+              <div class="participation-cover" aria-hidden="true">
+                <span><%= participation.category %></span>
+              </div>
               <!-- <div class="card-body">
                 
                 <p class="card-text"><%= participation.description %></p>

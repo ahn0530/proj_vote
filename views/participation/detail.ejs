@@ -1,10 +1,47 @@
 <% layout('layouts/boilerplate') %>
 
+<style>
+  .participation-cover {
+    position: relative;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 45%, #2c5364 100%);
+    border-bottom: 1px solid #e9ecef;
+    overflow: hidden;
+  }
+  .participation-cover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.25), transparent 35%),
+      radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.2), transparent 40%),
+      radial-gradient(circle at 30% 80%, rgba(255, 255, 255, 0.18), transparent 45%);
+    opacity: 0.9;
+  }
+  .participation-cover span {
+    position: relative;
+    z-index: 1;
+    padding: 0.45rem 1.1rem;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  }
+</style>
+
 <div class="container mt-4">
   <h1 class="mb-4"><%= participation.title %></h1>
 
   <div class="card">
-    <img src="<%= participation.imageUrl %>" class="card-img-top" alt="<%= participation.title %>">
+    <div class="participation-cover" aria-hidden="true">
+      <span><%= participation.category %></span>
+    </div>
     <div class="card-body">
       <p class="card-text"><%= participation.description %></p>
       <p class="card-text"><small class="text-muted">카테고리: <%= participation.category %></small></p>
