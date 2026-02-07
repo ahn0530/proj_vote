@@ -1,73 +1,67 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Proj Vote
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+참여 예산 제안과 투표를 웹에서 진행하는 블록체인 기반 서비스입니다. NestJS + EJS로 UI를 제공하고, Voting 스마트 컨트랙트를 통해 투표를 기록합니다.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 데모 화면
 
-## Description
+![Proj Vote Sample](docs/proj-vote-dashboard.png)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- 위 이미지는 샘플 데이터로 구성한 목업 화면입니다.
 
-## Installation
+## 주요 기능
+
+- 참여 예산 제안/투표 프로세스
+- 블록체인 투표 기록(Voting.sol)
+- 게시판/댓글/좋아요
+- 사용자 로그인/세션 인증
+- 예산 항목 관리 및 참여 집계
+
+## 기술 스택
+
+- NestJS, TypeScript
+- PostgreSQL, TypeORM
+- EJS, ejs-mate
+- Passport, express-session
+- Hardhat, Solidity, Ethers
+
+## 실행 방법
 
 ```bash
-$ npm install
+npm install
+npm run start:dev
 ```
 
-## Running the app
+- 기본 포트는 `3000` 입니다.
+- 실행 전 `.env` 환경 변수를 설정해야 합니다.
+
+## 환경 변수
+
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `SESSION_SECRET`
+- `SEPOLIA_URL`
+- `PRIVATE_KEY`
+- `VOTE_CONTRACT_ADDRESS`
+- `ABI_PATH` (선택, 기본값: `artifacts/contracts/Voting.sol/Voting.json`)
+
+## 스마트 컨트랙트
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run hardhat:compile
+npm run hardhat:deploy
+npm run hardhat:test
 ```
 
-## Test
+## 프로젝트 구조
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
+- `src/auth`: 세션 인증 및 로컬 로그인
+- `src/users`: 사용자 관리
+- `src/participation`: 참여 예산 로직
+- `src/budget-items`: 예산 항목 관리
+- `src/board`: 게시판/댓글/좋아요
+- `src/blockchain`: 투표 컨트랙트 연동
+- `contracts`: Solidity 컨트랙트
+- `views`: EJS 템플릿
