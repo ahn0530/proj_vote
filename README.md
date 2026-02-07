@@ -4,7 +4,16 @@
 
 ## 데모 화면
 
-![Proj Vote Screen](docs/proj-vote-dashboard.png)
+<table>
+  <tr>
+    <td align="center">예산 목록<br><img src="docs/proj-vote-dashboard.png" width="400"/></td>
+    <td align="center">참여 목록<br><img src="docs/proj-vote-join.png" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center">게시판<br><img src="docs/proj-vote-board.png" width="400"/></td>
+    <td align="center">로그인<br><img src="docs/proj-vote-login.png" width="400"/></td>
+  </tr>
+</table>
 
 - 위 이미지는 로컬 실행 화면 캡쳐입니다.
 
